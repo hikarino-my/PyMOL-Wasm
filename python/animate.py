@@ -1,0 +1,6 @@
+_p.cmd.refresh()
+_p.idle()
+_p._cmd.glViewport(0, 0, width,height)
+_p.cmd.viewport(width-gui_width,height)
+_p.idle()
+_p.draw()

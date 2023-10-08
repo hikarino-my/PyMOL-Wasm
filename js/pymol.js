@@ -1,4 +1,12 @@
 import { pdb1, filename1 } from "./eventHandlers.js";
+import setUpPymol from "./import_python.js?path=setup_pymol.py";
+import loadFile from "./import_python.js?path=load_file.py";
+import rayAction from "./import_python.js?path=ray_action.py";
+import cmdAction from "./import_python.js?path=cmd_input.py";
+import onClickAction from "./import_python.js?path=click.py";
+import animateAction from "./import_python.js?path=animate.py";
+import onWheelRollDownAction from "./import_python.js?path=wheel_roll_down.py";
+import onWheelRollUpAction from "./import_python.js?path=wheel_roll_up.py";
 pymol();
 async function pymol() {
   const canvas = document.getElementById("canvas");
@@ -20,34 +28,7 @@ async function pymol() {
   await pyodide.globals.set("width", width);
   await pyodide.globals.set("gui_width", gui_width);
   await pyodide.globals.set("height", height);
-  await pyodide.runPythonAsync(`
-				 
-      class SelfProxy:
-       def __init__(self, proxied, _self):
-        self._self = _self
-        self.proxied = proxied
-
-       def __getattr__(self, key):
-        v = getattr(self.proxied, key)
-        def wrapper(*a, **k):
-         k['_self'] = self._self
-         return v(*a, **k)
-        return wrapper
-
-      
-      import pymol2 as p2
-      _p = p2.PyMOL()
-      _p.start()
-      
-      import pymol.util
-      _p.util = SelfProxy(pymol.util, _p.cmd)
-      _p.cmd.set("internal_gui",1)
-      _p.cmd.set("internal_feedback", 1)
-      _p.cmd.bg_color("black")
-      _p.initEmscriptenContext(0,0,0,0,0)
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      `);
+  await pyodide.runPythonAsync(setUpPymol);
 
   const myButton = document.getElementById("my-button");
   myButton.addEventListener("click", async function () {
@@ -55,27 +36,7 @@ async function pymol() {
       try {
         await pyodide.FS.writeFile(filename1, pdb1);
         await pyodide.globals.set("fname1", filename1);
-        await pyodide.runPythonAsync(`
-      _p.cmd.load(fname1)
-      _p.cmd.set("label_font_id", 10)
-      _p.cmd.set("label_size", 30)
-      _p.cmd.set("sphere_mode", 0)
-      _p.cmd.set("render_as_cylinders", "off")
-      _p.cmd.set("dot_density", 25)            
-      _p.cmd.set("dot_lighting","off")
-      _p.cmd.set("line_width",5)
-      _p.cmd.set("trilines","on")
-      _p.cmd.set("dash_as_cylinders","on")
-      _p.cmd.set("nonbonded_as_cylinders","off")
-      _p.cmd.set("nb_spheres_use_shader", 2)
-      _p.cmd.set("internal_gui",1)
-      _p.cmd.set("internal_gui_width",gui_width)
-      _p.cmd.set("internal_feedback", 0)
-      _p.cmd.set("internal_gui_control_size", 30)
-      _p.cmd.bg_color("black")
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.draw()`);
+        await pyodide.runPythonAsync(loadFile);
         loaded = true;
       } catch (error) {}
     }, 100);
@@ -86,31 +47,7 @@ async function pymol() {
     setTimeout(async () => {
       try {
         await pyodide
-          .runPythonAsync(
-            `
-  _p.cmd.bg_color("white")
-  _p.cmd.set("antialias",2)
-  #_p.cmd.set("ray_trace_mode",2)
-  _p.cmd.set("ray_opaque_background",0)
-  #_p.cmd.set("fog",0)
-  #_p.cmd.set("ambient",0.66)
-  #_p.cmd.set("reflect",0)
-  #_p.cmd.set("spec_reflect",0.08)
-  #_p.cmd.set("light_count", 2)
-  # cartoon representation
-  #_p.cmd.set("cartoon_oval_width", 0.46)
-  #_p.cmd.set("cartoon_oval_length", 1.35)
-  #_p.cmd.set("cartoon_loop_radius", 0.46)
-  #_p.cmd.set("cartoon_oval_quality", 25)
-  #_p.cmd.set("cartoon_loop_quality", 100)
-  _p.cmd.png("/test.png",ray=1)
-  _p.cmd.bg_color("black")
-  _p.cmd.set("antialias",0)
-  _p.cmd.set("ray_trace_mode",0)
-  _p.cmd.set("ray_opaque_background",0)
-  print("DONE")
-`
-          )
+          .runPythonAsync(rayAction)
           .then(async () => {
             var data = await pyodide.FS.readFile("/test.png");
             var blob = new Blob([data], { type: "application/octet-stream" });
@@ -134,15 +71,7 @@ async function pymol() {
           var command = document.getElementById("cmdInput").value;
           //document.getElementById("commandline").innerText = command;
           await pyodide.globals.set("command", command);
-          await pyodide.runPythonAsync(`
-_p.cmd.do(command)
-_p.idle()
-_p._cmd.glViewport(0, 0, width,height)
-_p.cmd.viewport(width-gui_width,height)
-_p.idle()
-_p.draw()
-
-`);
+          await pyodide.runPythonAsync(cmdAction);
           cmdInput.value = "";
         } catch (error) {}
       }, 100);
@@ -383,14 +312,7 @@ _p.draw()
     await pyodide.globals.set("x", mouseX);
     await pyodide.globals.set("y", mouseY);
 
-    await pyodide.runPythonAsync(`
-      _p.button(4, 0, int(x), int(height - y), 0)
-      _p.idle()
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.idle()
-      _p.draw()
-      `);
+    await pyodide.runPythonAsync(onWheelRollUpAction);
   }
 
   async function onWheelRollDown(event) {
@@ -399,14 +321,7 @@ _p.draw()
     var mouseY = event.clientY - OriginY;
     await pyodide.globals.set("x", mouseX);
     await pyodide.globals.set("y", mouseY);
-    await pyodide.runPythonAsync(`
-      _p.button(3, 0, int(x), int(height - y), 0)
-      _p.idle()
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.idle()
-      _p.draw()
-      `);
+    await pyodide.runPythonAsync(onWheelRollDownAction);
   }
 
   let clickcount = 0;
@@ -420,25 +335,7 @@ _p.draw()
     await pyodide.globals.set("x", mouseX);
     await pyodide.globals.set("y", mouseY);
 
-    await pyodide.runPythonAsync(`
-      _p.button(0, 0, int(x), int(height - y), 0)
-      _p.idle()
-      _p.drag(x, height-y, 0)
-      _p.idle()
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.idle()
-      _p.draw()
-      _p.button(0, 1, int(x), int(height - y), 0)
-      _p.idle()
-      _p.drag(x, height-y, 0)
-      _p.idle()     
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.idle()
-      _p.draw()
-      _p.idle()      
-      `);
+    await pyodide.runPythonAsync(onClickAction);
   }
 
   const frameLimit = 2;
@@ -450,15 +347,7 @@ _p.draw()
       animating = false;
       return;
     } // Update the animation here
-    await pyodide.runPythonAsync(`
-      _p.cmd.refresh()
-      _p.idle()
-      _p._cmd.glViewport(0, 0, width,height)
-      _p.cmd.viewport(width-gui_width,height)
-      _p.idle()
-      _p.draw()
-	
-	`);
+    await pyodide.runPythonAsync(animateAction);
 
     frameCounter++;
     requestAnimationFrame(animate);
