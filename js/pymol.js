@@ -1,8 +1,160 @@
-export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_width,pdb1,filename1){
+let pdb1 = "";
+let filename1="dummy1.pdb";
+const dropArea1 = document.getElementById('drop-area1');
+dropArea1.addEventListener('dragenter', handleDragEnter1, false);
+dropArea1.addEventListener('dragleave', handleDragLeave1, false);
+dropArea1.addEventListener('dragover', handleDragOver1, false);
+dropArea1.addEventListener('drop', handleDrop1, false);
+dropArea1.addEventListener('click', handleClick1, false);
+
+function handleDragEnter1(event) {
+event.stopPropagation();
+event.preventDefault();
+dropArea1.style.background = '#eee';
+}
+
+function handleDragLeave1(event) {
+event.stopPropagation();
+event.preventDefault();
+dropArea1.style.background = '#fff';
+}
+
+function handleDragOver1(event) {
+event.stopPropagation();
+event.preventDefault();
+dropArea1.style.background = '#eee';
+}
+function handleDrop1(event) {
+event.stopPropagation();
+event.preventDefault();
+dropArea1.style.background = '#fff';
+const file = event.dataTransfer.files[0];
+const reader = new FileReader();
+// Check if the file name ends with ".gz"
+if (file.name.endsWith('.gz')) {
+    reader.onload = function (event) {
+    const compressedData = event.target.result;
+    
+    // Decompress the data using Pako
+    const decompressed = pako.inflate(compressedData, { to: 'string' });
+
+    ////console.log(decompressed);
+    // Store the decompressed data
+    pdb1 = decompressed;
+    filename1 = file.name.replace("\.gz","");
+    };
+    // Read the file as an array buffer
+    reader.readAsArrayBuffer(file);
+}else{
+    if (file.name.endsWith('.pse')){		  
+            if (file) {
+                const fileReader = new FileReader();		      
+                // Read the file as an ArrayBuffe		      
+                fileReader.onload = () => {
+                    const arrayBuffer = fileReader.result;
+                    // Convert the ArrayBuffer to a Uint8Array
+                    pdb1 = new Uint8Array(arrayBuffer);
+                    filename1 = file.name
+                    // Write the binary data to the Pyodide virtual file system
+        }
+        fileReader.readAsArrayBuffer(file);
+            }
+    // Read the file as an array buffer		  
+    }else{
+    reader.onload = function (event) {
+        const content = event.target.result;
+        
+        // Output the file contents to the ////console
+        ////console.log(content);
+        
+        // Store the file contents
+        pdb1 = content;
+        filename1 = file.name
+    };
+    
+    // Read the file as text
+    reader.readAsText(file);
+    }
+}
+dropArea1.textContent = file.name;
+}
+
+
+function handleClick1(event) {
+const input = document.createElement('input');
+input.type = 'file';
+input.onchange = function (event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    
+    // Check if the file name ends with ".gz"
+    if (file.name.endsWith('.gz')) {
+    reader.onload = function (event) {
+        const compressedData = event.target.result;
+        
+        // Decompress the data using Pako
+        const decompressed = pako.inflate(compressedData, { to: 'string' });
+        ////console.log(decompressed);
+        
+        // Store the decompressed data
+        pdb1 = decompressed;
+        filename1 = file.name.replace("\.gz","");
+    };
+    
+    // Read the file as an array buffer
+    reader.readAsArrayBuffer(file);
+    }else{
+if (file.name.endsWith('.pse')) {
+                if (file) {
+                const fileReader = new FileReader();		      
+                // Read the file as an ArrayBuffe
+        
+                fileReader.onload = () => {
+                    const arrayBuffer = fileReader.result;
+                    // Convert the ArrayBuffer to a Uint8Array
+                    pdb1 = new Uint8Array(arrayBuffer);
+                    filename1 = file.name
+                    // Write the binary data to the Pyodide virtual file system
+        }
+        fileReader.readAsArrayBuffer(file);
+            }
+
+    }else{
+        reader.onload = function (event) {
+        const content = event.target.result;
+        
+        // Output the file contents to the ////console
+        ////console.log(content);
+        
+        // Store the file contents
+        pdb1 = content;
+        filename1 = file.name
+        };
+        
+        // Read the file as text
+        reader.readAsText(file);
+    }
+    
+    }
+    dropArea1.textContent = file.name;
+}
+input.click();
+}
+
+pymol();
+async function pymol(){
+const canvas = document.getElementById('canvas');
+const rect = canvas.getBoundingClientRect();
+const OriginX = parseInt(rect.left);
+const OriginY = parseInt(rect.top);
+    const cv = document.getElementById("canvas");
     let pyodide = await loadPyodide();
     let loaded = false;
-    await pyodide.loadPackage(whlurl);
+    await pyodide.loadPackage("https://yakomaxa.github.io/PyMOL-Wasm/pymol-2.6.0a0-cp39-cp39-emscripten_3_1_46_wasm32.whl");
     // Run PyMOL code
+    const width = 1024;
+    const height = 600;
+    const gui_width= 220;
     await pyodide.globals.set("originX",OriginX);
     await pyodide.globals.set("originY",OriginY);
     await pyodide.globals.set("width",width);
@@ -35,14 +187,17 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       _p.initEmscriptenContext(0,0,0,0,0)
       _p._cmd.glViewport(0, 0, width,height)
       _p.cmd.viewport(width-gui_width,height)
-      `				  );
+      `
+      );
 
+      const myButton = document.getElementById('my-button');
+      myButton.addEventListener('click', async function(){
+      setTimeout(async () => {
+          try {
     await pyodide.FS.writeFile(filename1, pdb1);
     await pyodide.globals.set("fname1",filename1);
     await pyodide.runPythonAsync(`
-      _p.cmd.delete("all")
       _p.cmd.load(fname1)
-      _p.cmd.hide()
       _p.cmd.set("label_font_id", 10)
       _p.cmd.set("label_size", 30)
       _p.cmd.set("sphere_mode", 0)
@@ -52,10 +207,8 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       _p.cmd.set("line_width",5)
       _p.cmd.set("trilines","on")
       _p.cmd.set("dash_as_cylinders","on")
-      #_p.cmd.set("use_shaders")
-      #_p.cmd.show("everythin","all")
-      _p.cmd.show("cartoon")
-      _p.cmd.show("stick","het")
+      _p.cmd.set("nonbonded_as_cylinders","off")
+      _p.cmd.set("nb_spheres_use_shader", 2)
       _p.cmd.set("internal_gui",1)
       _p.cmd.set("internal_gui_width",gui_width)
       _p.cmd.set("internal_feedback", 0)
@@ -66,6 +219,85 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       _p.draw()`
 					      );
       loaded=true;
+      
+    } catch (error) {
+    
+    
+    }
+}, 100);
+})
+
+const rayButton = document.getElementById('ray-button');
+rayButton.addEventListener('click', async function(){
+setTimeout(async () => {
+    try {
+  await pyodide.runPythonAsync(`
+  _p.cmd.bg_color("white")
+  _p.cmd.set("antialias",2)
+  #_p.cmd.set("ray_trace_mode",2)
+  _p.cmd.set("ray_opaque_background",0)
+  #_p.cmd.set("fog",0)
+  #_p.cmd.set("ambient",0.66)
+  #_p.cmd.set("reflect",0)
+  #_p.cmd.set("spec_reflect",0.08)
+  #_p.cmd.set("light_count", 2)
+  # cartoon representation
+  #_p.cmd.set("cartoon_oval_width", 0.46)
+  #_p.cmd.set("cartoon_oval_length", 1.35)
+  #_p.cmd.set("cartoon_loop_radius", 0.46)
+  #_p.cmd.set("cartoon_oval_quality", 25)
+  #_p.cmd.set("cartoon_loop_quality", 100)
+  _p.cmd.png("/test.png",ray=1)
+  _p.cmd.bg_color("black")
+  _p.cmd.set("antialias",0)
+  _p.cmd.set("ray_trace_mode",0)
+  _p.cmd.set("ray_opaque_background",0)
+  print("DONE")
+`).then(async ()=>{
+    var data = await pyodide.FS.readFile('/test.png');
+    var blob = new Blob([data], { type: 'application/octet-stream' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = filename1+".png"; // Change the filename as needed
+    document.body.appendChild(link); // Add link to DOM
+    link.click();
+}
+);
+
+  } catch (error) {
+
+
+    }
+}, 100);
+})
+
+var cmdinput = document.getElementById("cmdInput");	  
+cmdinput.addEventListener("keypress", async function(event) {
+if (event.key === "Enter" && loaded) {
+event.preventDefault(); // Prevent the default action (if any)
+setTimeout(async () => {
+try {
+var command = document.getElementById("cmdInput").value;
+//document.getElementById("commandline").innerText = command;
+await pyodide.globals.set("command",command);
+await pyodide.runPythonAsync(`
+_p.cmd.do(command)
+_p.idle()
+_p._cmd.glViewport(0, 0, width,height)
+_p.cmd.viewport(width-gui_width,height)
+_p.idle()
+_p.draw()
+
+`)
+cmdInput.value = ""
+} catch (error) {
+
+
+}
+}, 100);
+}
+});
      
       let lastMouseX = null;
       let lastMouseY = null;
@@ -76,15 +308,19 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       let leftButtonCallNum_ctrl = 0;
       let mouseButtonDown = false;
       let key_ctrl = false;
+      let key_enter = false;
       var goLeftDown=false;
       
       async function onKeyDown(event){
-	  key_ctrl =  ((event.ctrlKey && !event.metaKey) || (!event.ctrlKey && event.metaKey));
+         key_ctrl =  ((event.ctrlKey && !event.metaKey) || (!event.ctrlKey && event.metaKey));
+         key_enter = event.Enter;
       }
 
       async function onKeyUp(event){
-	  key_ctrl =  ((event.ctrlKey && !event.metaKey) || (!event.ctrlKey && event.metaKey));
+         key_ctrl =  ((event.ctrlKey && !event.metaKey) || (!event.ctrlKey && event.metaKey));
+         key_enter = event.Enter;
       }
+
 
 
       async function Left(flag){
@@ -320,6 +556,7 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       var mouseY = event.clientY - OriginY;
       await pyodide.globals.set("x",mouseX);
       await pyodide.globals.set("y",mouseY);
+
       await  pyodide.runPythonAsync(`
       _p.button(0, 0, int(x), int(height - y), 0)
       _p.idle()
@@ -329,7 +566,7 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       _p.cmd.viewport(width-gui_width,height)
       _p.idle()
       _p.draw()
-      _p.button(0, 1, int(x-1), int(height - y-1), 0)
+      _p.button(0, 1, int(x), int(height - y), 0)
       _p.idle()
       _p.drag(x, height-y, 0)
       _p.idle()     
@@ -349,15 +586,16 @@ export default async function pymol(whlurl,OriginX,OriginY,width,height,gui_widt
       if (frameCounter >= frameLimit) {
       animating = false;
       return;
-      }
-
-      // Update the animation here
-      await  pyodide.runPythonAsync(`
+    }	// Update the animation here
+	await  pyodide.runPythonAsync(`
+      _p.cmd.refresh()
+      _p.idle()
       _p._cmd.glViewport(0, 0, width,height)
       _p.cmd.viewport(width-gui_width,height)
       _p.idle()
       _p.draw()
-      `);
+	
+	`);
      
 
       frameCounter++;
