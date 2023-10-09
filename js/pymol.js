@@ -1,3 +1,4 @@
+import { loadPyodide } from "pyodide";
 import { pdb1, filename1 } from "./eventHandlers.js";
 import setUpPymol from "./import_python.js?path=setup_pymol.py";
 import loadFile from "./import_python.js?path=load_file.py";

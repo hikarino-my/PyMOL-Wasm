@@ -1,0 +1,23 @@
+{
+  "name": "pymol-wasm",
+  "version": "1.0.0",
+  "description": "This is a repository providing a binary and html/javascript code for WebAssembly port of PyMOL.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hikarino-my/PyMOL-Wasm.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hikarino-my/PyMOL-Wasm/issues"
+  },
+  "homepage": "https://github.com/hikarino-my/PyMOL-Wasm#readme",
+  "dependencies": {
+    "pyodide": "^0.24.1"
+  }
+}
