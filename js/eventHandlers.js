@@ -148,3 +148,26 @@ dropArea1.addEventListener(
   },
   false
 );
+
+const fetchButton = document.getElementById("fetch-button");
+fetchButton.addEventListener("click", async function () {
+  const DBID = document.getElementById("DBID").value;
+  const loadMessage = document.getElementById("load-message");
+  if (DBID.length == 0) {
+    loadMessage.textContent = "Please input ID";
+    return;
+  }
+  //https://alphafold.ebi.ac.uk/files/AF-P38507-F1-model_v4.cif
+  const response = DBID.startsWith("AF-")
+    ? await fetch(`https://alphafold.ebi.ac.uk/files/${DBID}-model_v4.cif`)
+    : await fetch(`https://files.rcsb.org/download/${DBID}.cif`);
+  if (!response.ok) {
+    loadMessage.textContent = "File not found";
+    return;
+  }
+  loadMessage.textContent = "";
+  const content = await response.text();
+  pdb1 = content;
+  filename1 = DBID + ".cif";
+  dropArea1.textContent = filename1;
+});

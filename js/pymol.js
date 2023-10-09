@@ -36,7 +36,30 @@ async function pymol() {
       try {
         await pyodide.FS.writeFile(filename1, pdb1);
         await pyodide.globals.set("fname1", filename1);
-        await pyodide.runPythonAsync(loadFile);
+        if (!loaded) {
+          await pyodide.runPythonAsync(loadFile);
+          cv.addEventListener("click", onClick);
+          document.addEventListener("mousemove", onMouseMove);
+          document.addEventListener("mousemove", onMouseMove4Stop);
+          //cv.addEventListener('mousestop', onMouseStop);
+          cv.addEventListener("mousedown", onMouseDown);
+          cv.addEventListener("mouseup", onMouseUp);
+          cv.addEventListener("contextmenu", onContextMenu);
+          //cv.addEventListener('dblclick', onDoubleClick);
+          document.addEventListener("keydown", onKeyDown);
+          document.addEventListener("keyup", onKeyUp);
+          document.addEventListener("wheel", (event) => {
+            if (event.wheelDeltaY < 0) {
+              onWheelRollUp(event);
+            } else if (event.wheelDeltaY > 0) {
+              onWheelRollDown(event);
+            }
+          });
+        } else {
+          await pyodide.runPythonAsync(`
+                _p.cmd.load(fname1)
+            `);
+        }
         loaded = true;
       } catch (error) {}
     }, 100);
@@ -46,18 +69,16 @@ async function pymol() {
   rayButton.addEventListener("click", async function () {
     setTimeout(async () => {
       try {
-        await pyodide
-          .runPythonAsync(rayAction)
-          .then(async () => {
-            var data = await pyodide.FS.readFile("/test.png");
-            var blob = new Blob([data], { type: "application/octet-stream" });
-            var url = URL.createObjectURL(blob);
-            var link = document.createElement("a");
-            link.href = url;
-            link.download = filename1 + ".png"; // Change the filename as needed
-            document.body.appendChild(link); // Add link to DOM
-            link.click();
-          });
+        await pyodide.runPythonAsync(rayAction).then(async () => {
+          var data = await pyodide.FS.readFile("/test.png");
+          var blob = new Blob([data], { type: "application/octet-stream" });
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement("a");
+          link.href = url;
+          link.download = filename1 + ".png"; // Change the filename as needed
+          document.body.appendChild(link); // Add link to DOM
+          link.click();
+        });
       } catch (error) {}
     }, 100);
   });
@@ -352,24 +373,6 @@ async function pymol() {
     frameCounter++;
     requestAnimationFrame(animate);
   }
-
-  cv.addEventListener("click", onClick);
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mousemove", onMouseMove4Stop);
-  //cv.addEventListener('mousestop', onMouseStop);
-  cv.addEventListener("mousedown", onMouseDown);
-  cv.addEventListener("mouseup", onMouseUp);
-  cv.addEventListener("contextmenu", onContextMenu);
-  //cv.addEventListener('dblclick', onDoubleClick);
-  document.addEventListener("keydown", onKeyDown);
-  document.addEventListener("keyup", onKeyUp);
-  document.addEventListener("wheel", (event) => {
-    if (event.wheelDeltaY < 0) {
-      onWheelRollUp(event);
-    } else if (event.wheelDeltaY > 0) {
-      onWheelRollDown(event);
-    }
-  });
 
   let mouseStop = false;
   let mouseStopTimeout;
